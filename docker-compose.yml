@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: django_web
+    command: >
+      bash -c "
+        python src/manage.py makemigrations articles &&
+        python src/manage.py migrate &&
+        python src/manage.py runserver 0.0.0.0:8000
+      "
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_NAME=article_db
+      - DB_USER=article_user
+      - DB_PASSWORD=article_pass
+
+  db:
+    image: mariadb:10.5
+    container_name: mariadb
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass
+      - MYSQL_DATABASE=article_db
+      - MYSQL_USER=article_user
+      - MYSQL_PASSWORD=article_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s  # 有些人會設定長一點，以防止DB初始化需要更多時間      
+
+volumes:
+  db_data:
